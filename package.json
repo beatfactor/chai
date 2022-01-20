@@ -1,7 +1,10 @@
 {
   "author": "Jake Luer <jake@alogicalparadox.com>",
-  "name": "chai",
-  "description": "BDD/TDD assertion library for node.js and the browser. Test framework agnostic.",
+  "publishConfig": {
+    "access": "public"
+  },
+  "name": "@nightwatch/chai",
+  "description": "A forked of Chai 5 which adds Promise support in order to work with Nightwatch commands.",
   "keywords": [
     "test",
     "assertion",

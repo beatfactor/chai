@@ -63,9 +63,9 @@ exports.config = config;
 /*!
  * Primary `Assertion` prototype
  */
-
-var assertion = require('./chai/assertion');
-exports.use(assertion);
+exports.use(function(_chai, util) {
+  _chai.Assertion = require('./chai/assertion');
+});
 
 /*!
  * Core Assertions
@@ -95,7 +95,7 @@ exports.use(should);
 var assert = require('./chai/interface/assert');
 exports.use(assert);
 
-},{"./chai/assertion":3,"./chai/config":4,"./chai/core/assertions":5,"./chai/interface/assert":6,"./chai/interface/expect":7,"./chai/interface/should":8,"./chai/utils":22,"assertion-error":33}],3:[function(require,module,exports){
+},{"./chai/assertion":3,"./chai/config":4,"./chai/core/assertions":5,"./chai/interface/assert":6,"./chai/interface/expect":7,"./chai/interface/should":8,"./chai/utils":23,"assertion-error":34}],3:[function(require,module,exports){
 /*!
  * chai
  * http://chaijs.com
@@ -103,23 +103,12 @@ exports.use(assert);
  * MIT Licensed
  */
 
+var AssertionError = require('assertion-error');
+var util = require('./utils');
+var flag = util.flag;
 var config = require('./config');
 
-module.exports = function (_chai, util) {
-  /*!
-   * Module dependencies.
-   */
-
-  var AssertionError = _chai.AssertionError
-    , flag = util.flag;
-
-  /*!
-   * Module export.
-   */
-
-  _chai.Assertion = Assertion;
-
-  /*!
+/*!
    * Assertion Constructor
    *
    * Creates object for chaining.
@@ -157,122 +146,125 @@ module.exports = function (_chai, util) {
    * @api private
    */
 
-  function Assertion (obj, msg, ssfi, lockSsfi) {
-    flag(this, 'ssfi', ssfi || Assertion);
-    flag(this, 'lockSsfi', lockSsfi);
-    flag(this, 'object', obj);
-    flag(this, 'message', msg);
+function Assertion (obj, msg, ssfi, lockSsfi) {
+  flag(this, 'ssfi', ssfi || Assertion);
+  flag(this, 'lockSsfi', lockSsfi);
+  flag(this, 'object', obj);
+  flag(this, 'message', msg);
 
-    return util.proxify(this);
+  return util.proxify(this);
+}
+
+Object.defineProperty(Assertion, 'includeStack', {
+  get: function() {
+    console.warn('Assertion.includeStack is deprecated, use chai.config.includeStack instead.');
+    return config.includeStack;
+  },
+  set: function(value) {
+    console.warn('Assertion.includeStack is deprecated, use chai.config.includeStack instead.');
+    config.includeStack = value;
   }
+});
 
-  Object.defineProperty(Assertion, 'includeStack', {
-    get: function() {
-      console.warn('Assertion.includeStack is deprecated, use chai.config.includeStack instead.');
-      return config.includeStack;
-    },
-    set: function(value) {
-      console.warn('Assertion.includeStack is deprecated, use chai.config.includeStack instead.');
-      config.includeStack = value;
-    }
-  });
+Object.defineProperty(Assertion, 'showDiff', {
+  get: function() {
+    console.warn('Assertion.showDiff is deprecated, use chai.config.showDiff instead.');
+    return config.showDiff;
+  },
+  set: function(value) {
+    console.warn('Assertion.showDiff is deprecated, use chai.config.showDiff instead.');
+    config.showDiff = value;
+  }
+});
 
-  Object.defineProperty(Assertion, 'showDiff', {
-    get: function() {
-      console.warn('Assertion.showDiff is deprecated, use chai.config.showDiff instead.');
-      return config.showDiff;
-    },
-    set: function(value) {
-      console.warn('Assertion.showDiff is deprecated, use chai.config.showDiff instead.');
-      config.showDiff = value;
-    }
-  });
-
-  Assertion.addProperty = function (name, fn) {
-    util.addProperty(this.prototype, name, fn);
-  };
-
-  Assertion.addMethod = function (name, fn) {
-    util.addMethod(this.prototype, name, fn);
-  };
-
-  Assertion.addChainableMethod = function (name, fn, chainingBehavior) {
-    util.addChainableMethod(this.prototype, name, fn, chainingBehavior);
-  };
-
-  Assertion.overwriteProperty = function (name, fn) {
-    util.overwriteProperty(this.prototype, name, fn);
-  };
-
-  Assertion.overwriteMethod = function (name, fn) {
-    util.overwriteMethod(this.prototype, name, fn);
-  };
-
-  Assertion.overwriteChainableMethod = function (name, fn, chainingBehavior) {
-    util.overwriteChainableMethod(this.prototype, name, fn, chainingBehavior);
-  };
-
-  /**
-   * ### .assert(expression, message, negateMessage, expected, actual, showDiff)
-   *
-   * Executes an expression and check expectations. Throws AssertionError for reporting if test doesn't pass.
-   *
-   * @name assert
-   * @param {Philosophical} expression to be tested
-   * @param {String|Function} message or function that returns message to display if expression fails
-   * @param {String|Function} negatedMessage or function that returns negatedMessage to display if negated expression fails
-   * @param {Mixed} expected value (remember to check for negation)
-   * @param {Mixed} actual (optional) will default to `this.obj`
-   * @param {Boolean} showDiff (optional) when set to `true`, assert will display a diff in addition to the message if expression fails
-   * @api private
-   */
-
-  Assertion.prototype.assert = function (expr, msg, negateMsg, expected, _actual, showDiff) {
-    var ok = util.test(this, arguments);
-    if (false !== showDiff) showDiff = true;
-    if (undefined === expected && undefined === _actual) showDiff = false;
-    if (true !== config.showDiff) showDiff = false;
-
-    if (!ok) {
-      msg = util.getMessage(this, arguments);
-      var actual = util.getActual(this, arguments);
-      var assertionErrorObjectProperties = {
-          actual: actual
-        , expected: expected
-        , showDiff: showDiff
-      };
-
-      var operator = util.getOperator(this, arguments);
-      if (operator) {
-        assertionErrorObjectProperties.operator = operator;
-      }
-
-      throw new AssertionError(
-        msg,
-        assertionErrorObjectProperties,
-        (config.includeStack) ? this.assert : flag(this, 'ssfi'));
-    }
-  };
-
-  /*!
-   * ### ._obj
-   *
-   * Quick reference to stored `actual` value for plugin developers.
-   *
-   * @api private
-   */
-
-  Object.defineProperty(Assertion.prototype, '_obj',
-    { get: function () {
-        return flag(this, 'object');
-      }
-    , set: function (val) {
-        flag(this, 'object', val);
-      }
-  });
+Assertion.addProperty = function (name, fn) {
+  util.addProperty(this.prototype, name, fn);
 };
 
-},{"./config":4}],4:[function(require,module,exports){
+Assertion.addMethod = function (name, fn) {
+  util.addMethod(this.prototype, name, fn);
+};
+
+Assertion.addChainableMethod = function (name, fn, chainingBehavior) {
+  util.addChainableMethod(this.prototype, name, fn, chainingBehavior);
+};
+
+Assertion.overwriteProperty = function (name, fn) {
+  util.overwriteProperty(this.prototype, name, fn);
+};
+
+Assertion.overwriteMethod = function (name, fn) {
+  util.overwriteMethod(this.prototype, name, fn);
+};
+
+Assertion.overwriteChainableMethod = function (name, fn, chainingBehavior) {
+  util.overwriteChainableMethod(this.prototype, name, fn, chainingBehavior);
+};
+
+/**
+ * ### .assert(expression, message, negateMessage, expected, actual, showDiff)
+ *
+ * Executes an expression and check expectations. Throws AssertionError for reporting if test doesn't pass.
+ *
+ * @name assert
+ * @param {Philosophical} expression to be tested
+ * @param {String|Function} message or function that returns message to display if expression fails
+ * @param {String|Function} negatedMessage or function that returns negatedMessage to display if negated expression fails
+ * @param {Mixed} expected value (remember to check for negation)
+ * @param {Mixed} actual (optional) will default to `this.obj`
+ * @param {Boolean} showDiff (optional) when set to `true`, assert will display a diff in addition to the message if expression fails
+ * @api private
+ */
+
+Assertion.prototype.assert = function (expr, msg, negateMsg, expected, _actual, showDiff) {
+  var ok = util.test(this, arguments);
+  if (false !== showDiff) showDiff = true;
+  if (undefined === expected && undefined === _actual) showDiff = false;
+  if (true !== config.showDiff) showDiff = false;
+
+  msg = util.getMessage(this, arguments);
+  flag(this, 'assertMessage', msg);
+
+  if (!ok) {
+    var actual = util.getActual(this, arguments);
+    var assertionErrorObjectProperties = {
+      actual: actual
+      , expected: expected
+      , showDiff: showDiff
+    };
+
+    var operator = util.getOperator(this, arguments);
+    if (operator) {
+      assertionErrorObjectProperties.operator = operator;
+    }
+
+    throw new AssertionError(
+      msg,
+      assertionErrorObjectProperties,
+      (config.includeStack) ? this.assert : flag(this, 'ssfi'));
+  }
+};
+
+/*!
+ * ### ._obj
+ *
+ * Quick reference to stored `actual` value for plugin developers.
+ *
+ * @api private
+ */
+
+Object.defineProperty(Assertion.prototype, '_obj',
+  { get: function () {
+      return flag(this, 'object');
+    }
+    , set: function (val) {
+      flag(this, 'object', val);
+    }
+  });
+
+module.exports = Assertion;
+
+},{"./config":4,"./utils":23,"assertion-error":34}],4:[function(require,module,exports){
 module.exports = {
 
   /**
@@ -7620,10 +7612,11 @@ module.exports = function (chai, util) {
  */
 
 var addLengthGuard = require('./addLengthGuard');
-var chai = require('../../chai');
+var Assertion = require('../assertion');
 var flag = require('./flag');
 var proxify = require('./proxify');
 var transferFlags = require('./transferFlags');
+var deferAssertion = require('./deferAssertion');
 
 /*!
  * Module variables
@@ -7721,12 +7714,23 @@ module.exports = function addChainableMethod(ctx, name, method, chainingBehavior
             flag(this, 'ssfi', chainableMethodWrapper);
           }
 
-          var result = chainableBehavior.method.apply(this, arguments);
-          if (result !== undefined) {
-            return result;
+          var newAssertion = new Assertion();
+          var result;
+          var object = flag(this, 'object');
+
+          if (object instanceof Promise) {
+            var args = Array.prototype.slice.call(arguments, 0);
+
+            deferAssertion.call(this, object, name, function() {
+              return chainableBehavior.method.apply(this, args);
+            }, true, false, args);
+          } else {
+            result = chainableBehavior.method.apply(this, arguments);
+            if (result !== undefined) {
+              return result;
+            }
           }
 
-          var newAssertion = new chai.Assertion();
           transferFlags(this, newAssertion);
           return newAssertion;
         };
@@ -7762,7 +7766,7 @@ module.exports = function addChainableMethod(ctx, name, method, chainingBehavior
   });
 };
 
-},{"../../chai":2,"./addLengthGuard":10,"./flag":15,"./proxify":30,"./transferFlags":32}],10:[function(require,module,exports){
+},{"../assertion":3,"./addLengthGuard":10,"./deferAssertion":14,"./flag":16,"./proxify":31,"./transferFlags":33}],10:[function(require,module,exports){
 var fnLengthDesc = Object.getOwnPropertyDescriptor(function () {}, 'length');
 
 /*!
@@ -7832,10 +7836,11 @@ module.exports = function addLengthGuard (fn, assertionName, isChainable) {
  */
 
 var addLengthGuard = require('./addLengthGuard');
-var chai = require('../../chai');
+var Assertion = require('../assertion');
 var flag = require('./flag');
 var proxify = require('./proxify');
 var transferFlags = require('./transferFlags');
+var deferAssertion = require('./deferAssertion');
 
 /**
  * ### .addMethod(ctx, name, method)
@@ -7881,11 +7886,23 @@ module.exports = function addMethod(ctx, name, method) {
       flag(this, 'ssfi', methodWrapper);
     }
 
-    var result = method.apply(this, arguments);
-    if (result !== undefined)
-      return result;
+    var newAssertion = new Assertion();
+    var result;
+    var object = flag(this, 'object');
 
-    var newAssertion = new chai.Assertion();
+    if (object instanceof Promise) {
+      var args = Array.prototype.slice.call(arguments, 0);
+      deferAssertion.call(this, object, name, function(assertion) {
+        return method.apply(this, args);
+      }, true, false, args);
+    } else {
+      result = method.apply(this, arguments);
+    }
+
+    if (result !== undefined) {
+      return result;
+    }
+
     transferFlags(this, newAssertion);
     return newAssertion;
   };
@@ -7894,17 +7911,18 @@ module.exports = function addMethod(ctx, name, method) {
   ctx[name] = proxify(methodWrapper, name);
 };
 
-},{"../../chai":2,"./addLengthGuard":10,"./flag":15,"./proxify":30,"./transferFlags":32}],12:[function(require,module,exports){
+},{"../assertion":3,"./addLengthGuard":10,"./deferAssertion":14,"./flag":16,"./proxify":31,"./transferFlags":33}],12:[function(require,module,exports){
 /*!
  * Chai - addProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
  * MIT Licensed
  */
 
-var chai = require('../../chai');
+var Assertion = require('../assertion');
 var flag = require('./flag');
 var isProxyEnabled = require('./isProxyEnabled');
 var transferFlags = require('./transferFlags');
+var deferAssertion = require('./deferAssertion');
 
 /**
  * ### .addProperty(ctx, name, getter)
@@ -7933,7 +7951,19 @@ var transferFlags = require('./transferFlags');
  */
 
 module.exports = function addProperty(ctx, name, getter) {
-  getter = getter === undefined ? function () {} : getter;
+  var hasAssertion = true;
+
+  if (getter === undefined) {
+    hasAssertion = false;
+    getter = function () {
+      flag(this, name, true);
+      return this;
+    }
+  } else {
+    hasAssertion = ![
+      'name', 'deep', 'nested', 'own', 'ordered', 'any', 'all',
+    ].includes(name);
+  }
 
   Object.defineProperty(ctx, name,
     { get: function propertyGetter() {
@@ -7956,11 +7986,20 @@ module.exports = function addProperty(ctx, name, getter) {
           flag(this, 'ssfi', propertyGetter);
         }
 
-        var result = getter.call(this);
-        if (result !== undefined)
-          return result;
+        var newAssertion = new Assertion();
+        var result;
+        var object = flag(this, 'object');
 
-        var newAssertion = new chai.Assertion();
+        if (object instanceof Promise) {
+          deferAssertion.call(this, object, name, getter, hasAssertion, true);
+        } else {
+          result = getter.call(this);
+        }
+
+        if (result !== undefined) {
+          return result;
+        }
+
         transferFlags(this, newAssertion);
         return newAssertion;
       }
@@ -7968,7 +8007,7 @@ module.exports = function addProperty(ctx, name, getter) {
   });
 };
 
-},{"../../chai":2,"./flag":15,"./isProxyEnabled":25,"./transferFlags":32}],13:[function(require,module,exports){
+},{"../assertion":3,"./deferAssertion":14,"./flag":16,"./isProxyEnabled":26,"./transferFlags":33}],13:[function(require,module,exports){
 /*!
  * Chai - compareByInspect utility
  * Copyright(c) 2011-2016 Jake Luer <jake@alogicalparadox.com>
@@ -8001,7 +8040,71 @@ module.exports = function compareByInspect(a, b) {
   return inspect(a) < inspect(b) ? -1 : 1;
 };
 
-},{"./inspect":23}],14:[function(require,module,exports){
+},{"./inspect":24}],14:[function(require,module,exports){
+var flag = require('./flag');
+var objDisplay = require('./objDisplay');
+
+/**
+ *
+ * @param {Promise} object
+ * @param {String} name
+ * @param {Function} getter
+ * @param {Boolean} hasAssertion
+ */
+module.exports = function(object, name, getter, hasAssertion, isProperty, args) {
+  var handlers = flag(this, 'handlers') || [];
+
+  if (handlers.length === 0) {
+    object
+      .then(result => {
+        flag(this, 'object', result);
+        var actionFn = flag(this, 'actionFn');
+        var queueActionFn;
+
+        var currentHandlers = flag(this, 'handlers');
+        var handler;
+        var assertionName = [''];
+        var assertions = [];
+        var valueDisplay = objDisplay(result);
+        queueActionFn = actionFn();
+
+        while (currentHandlers.length) {
+          handler = currentHandlers.shift();
+
+          assertionName.push(handler.isProperty ? handler.name : `${handler.name}(${objDisplay(handler.args)})`);
+
+          if (handler.hasAssertion) {
+            assertions.push(handler.action);
+          }
+        }
+
+        var action;
+        queueActionFn(valueDisplay, assertionName, function() {
+          while (assertions.length) {
+            action = assertions.shift();
+            action(this);
+          }
+
+          return flag(this, 'assertMessage');
+        }.bind(this));
+      })
+      .catch((err) => {
+        flag(this, 'error', err);
+      });
+  }
+
+  handlers.push({
+    name: name,
+    isProperty: isProperty,
+    args: args ? args[0] : '',
+    hasAssertion: hasAssertion,
+    action: function(assertion) {
+      return getter.call(assertion);
+    }
+  });
+  flag(this, 'handlers', handlers);
+}
+},{"./flag":16,"./objDisplay":27}],15:[function(require,module,exports){
 /*!
  * Chai - expectTypes utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8054,7 +8157,7 @@ module.exports = function expectTypes(obj, types) {
   }
 };
 
-},{"./flag":15,"assertion-error":33,"type-detect":38}],15:[function(require,module,exports){
+},{"./flag":16,"assertion-error":34,"type-detect":39}],16:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8081,15 +8184,20 @@ module.exports = function expectTypes(obj, types) {
  */
 
 module.exports = function flag(obj, key, value) {
-  var flags = obj.__flags || (obj.__flags = Object.create(null));
-  if (arguments.length === 3) {
-    flags[key] = value;
-  } else {
-    return flags[key];
+  const flags = obj.__flags || (obj.__flags = new Map());
+
+  if (arguments.length === 1) {
+    return flags;
   }
+
+  if (arguments.length === 2) {
+    return flags.get(key);
+  }
+
+  flags.set(key, value);
 };
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 /*!
  * Chai - getActual utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8111,7 +8219,7 @@ module.exports = function getActual(obj, args) {
   return args.length > 4 ? args[4] : obj._obj;
 };
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 /*!
  * Chai - message composition utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8163,7 +8271,7 @@ module.exports = function getMessage(obj, args) {
   return flagMsg ? flagMsg + ': ' + msg : msg;
 };
 
-},{"./flag":15,"./getActual":16,"./objDisplay":26}],18:[function(require,module,exports){
+},{"./flag":16,"./getActual":17,"./objDisplay":27}],19:[function(require,module,exports){
 var type = require('type-detect');
 
 var flag = require('./flag');
@@ -8220,7 +8328,7 @@ module.exports = function getOperator(obj, args) {
   return isObject ? 'deepStrictEqual' : 'strictEqual';
 };
 
-},{"./flag":15,"type-detect":38}],19:[function(require,module,exports){
+},{"./flag":16,"type-detect":39}],20:[function(require,module,exports){
 /*!
  * Chai - getOwnEnumerableProperties utility
  * Copyright(c) 2011-2016 Jake Luer <jake@alogicalparadox.com>
@@ -8251,7 +8359,7 @@ module.exports = function getOwnEnumerableProperties(obj) {
   return Object.keys(obj).concat(getOwnEnumerablePropertySymbols(obj));
 };
 
-},{"./getOwnEnumerablePropertySymbols":20}],20:[function(require,module,exports){
+},{"./getOwnEnumerablePropertySymbols":21}],21:[function(require,module,exports){
 /*!
  * Chai - getOwnEnumerablePropertySymbols utility
  * Copyright(c) 2011-2016 Jake Luer <jake@alogicalparadox.com>
@@ -8280,7 +8388,7 @@ module.exports = function getOwnEnumerablePropertySymbols(obj) {
   });
 };
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 /*!
  * Chai - getProperties utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8318,7 +8426,7 @@ module.exports = function getProperties(object) {
   return result;
 };
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 /*!
  * chai
  * Copyright(c) 2011 Jake Luer <jake@alogicalparadox.com>
@@ -8500,7 +8608,7 @@ exports.isNaN = require('./isNaN');
 
 exports.getOperator = require('./getOperator');
 
-},{"./addChainableMethod":9,"./addLengthGuard":10,"./addMethod":11,"./addProperty":12,"./compareByInspect":13,"./expectTypes":14,"./flag":15,"./getActual":16,"./getMessage":17,"./getOperator":18,"./getOwnEnumerableProperties":19,"./getOwnEnumerablePropertySymbols":20,"./inspect":23,"./isNaN":24,"./isProxyEnabled":25,"./objDisplay":26,"./overwriteChainableMethod":27,"./overwriteMethod":28,"./overwriteProperty":29,"./proxify":30,"./test":31,"./transferFlags":32,"check-error":34,"deep-eql":35,"pathval":37,"type-detect":38}],23:[function(require,module,exports){
+},{"./addChainableMethod":9,"./addLengthGuard":10,"./addMethod":11,"./addProperty":12,"./compareByInspect":13,"./expectTypes":15,"./flag":16,"./getActual":17,"./getMessage":18,"./getOperator":19,"./getOwnEnumerableProperties":20,"./getOwnEnumerablePropertySymbols":21,"./inspect":24,"./isNaN":25,"./isProxyEnabled":26,"./objDisplay":27,"./overwriteChainableMethod":28,"./overwriteMethod":29,"./overwriteProperty":30,"./proxify":31,"./test":32,"./transferFlags":33,"check-error":35,"deep-eql":36,"pathval":38,"type-detect":39}],24:[function(require,module,exports){
 // This is (almost) directly from Node.js utils
 // https://github.com/joyent/node/blob/f8c335d0caf47f16d31413f89aa28eda3878e3aa/lib/util.js
 
@@ -8534,7 +8642,7 @@ function inspect(obj, showHidden, depth, colors) {
   return loupe.inspect(obj, options);
 }
 
-},{"../config":4,"loupe":36}],24:[function(require,module,exports){
+},{"../config":4,"loupe":37}],25:[function(require,module,exports){
 /*!
  * Chai - isNaN utility
  * Copyright(c) 2012-2015 Sakthipriyan Vairamani <thechargingvolcano@gmail.com>
@@ -8562,7 +8670,7 @@ function isNaN(value) {
 // If ECMAScript 6's Number.isNaN is present, prefer that.
 module.exports = Number.isNaN || isNaN;
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 var config = require('../config');
 
 /*!
@@ -8588,7 +8696,7 @@ module.exports = function isProxyEnabled() {
     typeof Reflect !== 'undefined';
 };
 
-},{"../config":4}],26:[function(require,module,exports){
+},{"../config":4}],27:[function(require,module,exports){
 /*!
  * Chai - flag utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8640,14 +8748,14 @@ module.exports = function objDisplay(obj) {
   }
 };
 
-},{"../config":4,"./inspect":23}],27:[function(require,module,exports){
+},{"../config":4,"./inspect":24}],28:[function(require,module,exports){
 /*!
  * Chai - overwriteChainableMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
  * MIT Licensed
  */
 
-var chai = require('../../chai');
+var Assertion = require('../assertion');
 var transferFlags = require('./transferFlags');
 
 /**
@@ -8693,7 +8801,7 @@ module.exports = function overwriteChainableMethod(ctx, name, method, chainingBe
       return result;
     }
 
-    var newAssertion = new chai.Assertion();
+    var newAssertion = new Assertion();
     transferFlags(this, newAssertion);
     return newAssertion;
   };
@@ -8705,13 +8813,13 @@ module.exports = function overwriteChainableMethod(ctx, name, method, chainingBe
       return result;
     }
 
-    var newAssertion = new chai.Assertion();
+    var newAssertion = new Assertion();
     transferFlags(this, newAssertion);
     return newAssertion;
   };
 };
 
-},{"../../chai":2,"./transferFlags":32}],28:[function(require,module,exports){
+},{"../assertion":3,"./transferFlags":33}],29:[function(require,module,exports){
 /*!
  * Chai - overwriteMethod utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -8719,7 +8827,7 @@ module.exports = function overwriteChainableMethod(ctx, name, method, chainingBe
  */
 
 var addLengthGuard = require('./addLengthGuard');
-var chai = require('../../chai');
+var Assertion = require('../assertion');
 var flag = require('./flag');
 var proxify = require('./proxify');
 var transferFlags = require('./transferFlags');
@@ -8796,7 +8904,7 @@ module.exports = function overwriteMethod(ctx, name, method) {
       return result;
     }
 
-    var newAssertion = new chai.Assertion();
+    var newAssertion = new Assertion();
     transferFlags(this, newAssertion);
     return newAssertion;
   }
@@ -8805,17 +8913,17 @@ module.exports = function overwriteMethod(ctx, name, method) {
   ctx[name] = proxify(overwritingMethodWrapper, name);
 };
 
-},{"../../chai":2,"./addLengthGuard":10,"./flag":15,"./proxify":30,"./transferFlags":32}],29:[function(require,module,exports){
+},{"../assertion":3,"./addLengthGuard":10,"./flag":16,"./proxify":31,"./transferFlags":33}],30:[function(require,module,exports){
 /*!
  * Chai - overwriteProperty utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
  * MIT Licensed
  */
 
-var chai = require('../../chai');
 var flag = require('./flag');
 var isProxyEnabled = require('./isProxyEnabled');
 var transferFlags = require('./transferFlags');
+var Assertion = require('../assertion')
 
 /**
  * ### .overwriteProperty(ctx, name, fn)
@@ -8891,7 +8999,7 @@ module.exports = function overwriteProperty(ctx, name, getter) {
           return result;
         }
 
-        var newAssertion = new chai.Assertion();
+        var newAssertion = new Assertion();
         transferFlags(this, newAssertion);
         return newAssertion;
       }
@@ -8899,7 +9007,7 @@ module.exports = function overwriteProperty(ctx, name, getter) {
   });
 };
 
-},{"../../chai":2,"./flag":15,"./isProxyEnabled":25,"./transferFlags":32}],30:[function(require,module,exports){
+},{"../assertion":3,"./flag":16,"./isProxyEnabled":26,"./transferFlags":33}],31:[function(require,module,exports){
 var config = require('../config');
 var flag = require('./flag');
 var getProperties = require('./getProperties');
@@ -8977,6 +9085,18 @@ module.exports = function proxify(obj, nonChainableMethodName) {
           throw Error('Invalid Chai property: ' + property +
             '. Did you mean "' + suggestion + '"?');
         } else {
+          if ([
+            'visible', 'active', 'enabled', 'present', 'selected', 'text', 'value'
+          ].includes(property)) {
+            throw Error('Property ".' + property + '" is not available when asserting on non-element values.');
+          }
+
+          if ([
+            'attribute', 'css'
+          ].includes(property)) {
+            throw Error('Method ".' + property + '()" is not available when asserting on non-element values.');
+          }
+
           throw Error('Invalid Chai property: ' + property);
         }
       }
@@ -9048,7 +9168,7 @@ function stringDistanceCapped(strA, strB, cap) {
   return memo[strA.length][strB.length];
 }
 
-},{"../config":4,"./flag":15,"./getProperties":21,"./isProxyEnabled":25}],31:[function(require,module,exports){
+},{"../config":4,"./flag":16,"./getProperties":22,"./isProxyEnabled":26}],32:[function(require,module,exports){
 /*!
  * Chai - test utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9078,7 +9198,7 @@ module.exports = function test(obj, args) {
   return negate ? !expr : expr;
 };
 
-},{"./flag":15}],32:[function(require,module,exports){
+},{"./flag":16}],33:[function(require,module,exports){
 /*!
  * Chai - transferFlags utility
  * Copyright(c) 2012-2014 Jake Luer <jake@alogicalparadox.com>
@@ -9109,23 +9229,24 @@ module.exports = function test(obj, args) {
  */
 
 module.exports = function transferFlags(assertion, object, includeAll) {
-  var flags = assertion.__flags || (assertion.__flags = Object.create(null));
+  var flags = assertion.__flags || (assertion.__flags = new Map());
 
   if (!object.__flags) {
-    object.__flags = Object.create(null);
+    object.__flags = new Map();
   }
 
   includeAll = arguments.length === 3 ? includeAll : true;
 
-  for (var flag in flags) {
+  //for (var flag in flags) {
+  flags.forEach(function(value, key) {
     if (includeAll ||
-        (flag !== 'object' && flag !== 'ssfi' && flag !== 'lockSsfi' && flag != 'message')) {
-      object.__flags[flag] = flags[flag];
+      (key !== 'object' && key !== 'ssfi' && key !== 'lockSsfi' && key != 'message')) {
+      object.__flags.set(key, value);
     }
-  }
+  })
 };
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /*!
  * assertion-error
  * Copyright(c) 2013 Jake Luer <jake@qualiancy.com>
@@ -9243,7 +9364,7 @@ AssertionError.prototype.toJSON = function (stack) {
   return props;
 };
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 'use strict';
 
 /* !
@@ -9417,7 +9538,7 @@ module.exports = {
   getConstructorName: getConstructorName,
 };
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 'use strict';
 /* globals Symbol: false, Uint8Array: false, WeakMap: false */
 /*!
@@ -9874,7 +9995,7 @@ function isPrimitive(value) {
   return value === null || typeof value !== 'object';
 }
 
-},{"type-detect":38}],36:[function(require,module,exports){
+},{"type-detect":39}],37:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
@@ -11097,7 +11218,7 @@ function isPrimitive(value) {
 
 })));
 
-},{"util":undefined}],37:[function(require,module,exports){
+},{"util":undefined}],38:[function(require,module,exports){
 'use strict';
 
 /* !
@@ -11400,7 +11521,7 @@ module.exports = {
   setPathValue: setPathValue,
 };
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
